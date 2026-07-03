@@ -10,6 +10,9 @@ const schema = z.object({
 
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.url(),
+  // Optional override for the base URL Playwright navigates to when rendering PDFs.
+  // Defaults to BETTER_AUTH_URL. Set only if the internal URL differs from the public one.
+  APP_URL: z.url().optional(),
 
   RESEND_API_KEY: z.string().min(1).optional(),
   EMAIL_FROM: z.string().min(1).default('invoices@hapuk.io'),

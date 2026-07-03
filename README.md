@@ -517,6 +517,32 @@ Then apply the initial migration: `pnpm db:migrate`.
 
 ---
 
+## Deployment
+
+The app builds to Next's **standalone** output (`output: 'standalone'`) and ships as a
+container. The one non-obvious requirement is **headless Chromium for PDF export**, so
+the runtime image is based on the official Playwright image (Chromium + OS deps
+preinstalled).
+
+```bash
+docker build -t hapuk .
+docker run -p 3000:3000 --env-file .env.production hapuk
+```
+
+- Keep the Playwright image tag in the `Dockerfile` in sync with the `playwright`
+  version in `package.json` so the bundled browser matches the client.
+- **Runtime env**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (public app
+  URL), `AWS_REGION`/`S3_BUCKET`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`
+  (+`S3_ENDPOINT` for R2/MinIO), `RESEND_API_KEY`, `EMAIL_FROM`. Set `APP_URL` only when
+  the URL Playwright should hit internally differs from `BETTER_AUTH_URL`.
+- **Migrations** are a separate deploy step: run `pnpm db:migrate` against the target
+  `DATABASE_URL` before/at release (not baked into the runtime image).
+- The PDF route runs on the **Node.js runtime** (not Edge). On Lambda-style hosts
+  without a persistent Chromium, swap Playwright for `@sparticuz/chromium` instead of the
+  Playwright base image.
+
+---
+
 ## Conventions for Claude Code
 
 - **Tenant scoping is mandatory.** Every tenant-table query filters by the active `organizationId` and

@@ -24,6 +24,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type Member = {
   id: string;
@@ -37,9 +44,6 @@ type Invitation = {
   role?: string | null;
   status: string;
 };
-
-const roleSelectClass =
-  'h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-xs outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-50';
 
 function initials(name: string) {
   return (
@@ -167,12 +171,20 @@ export function MembersManager({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <FormControl>
-                    <select className={roleSelectClass} {...field}>
-                      <option value="member">Member</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </FormControl>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -215,17 +227,21 @@ export function MembersManager({
                 </div>
                 {canManage && !isOwner && !isSelf ? (
                   <>
-                    <select
-                      className={roleSelectClass}
+                    <Select
                       value={m.role}
                       disabled={busyId === m.id}
-                      onChange={(e) =>
-                        changeRole(m.id, e.target.value as 'admin' | 'member')
+                      onValueChange={(value) =>
+                        changeRole(m.id, value as 'admin' | 'member')
                       }
                     >
-                      <option value="member">Member</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                      <SelectTrigger size="sm" className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button
                       type="button"
                       variant="ghost"

@@ -10,6 +10,9 @@ const PROTECTED_PREFIXES = [
   '/profile',
   '/onboarding',
   '/organization',
+  '/projects',
+  '/invoices',
+  '/print',
   '/accept-invitation',
 ];
 

@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1782992634294,
+      "tag": "0000_keen_jigsaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782999731079,
+      "tag": "0001_add_invitation_created_at",
+      "breakpoints": true
+    }
+  ]
+}

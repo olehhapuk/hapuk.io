@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: hapuk-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hapuk
+    ports:
+      - "5432:5432"
+    volumes:
+      - hapuk-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hapuk"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # S3-compatible object storage for signatures & PDFs.
+  # API: http://localhost:9000  |  Web console: http://localhost:9001 (minioadmin / minioadmin)
+  minio:
+    image: minio/minio:latest
+    container_name: hapuk-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_SITE_REGION: eu-central-1
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - hapuk-minio-data:/data
+
+  # One-shot: waits for MinIO, creates the bucket, and makes objects publicly
+  # downloadable (dev convenience so signature/PDF URLs render without presigning GETs).
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do echo 'waiting for minio...'; sleep 1; done;
+      mc mb --ignore-existing local/hapuk-uploads;
+      mc anonymous set download local/hapuk-uploads;
+      echo 'minio bucket ready';
+      exit 0;
+      "
+
+volumes:
+  hapuk-pg-data:
+  hapuk-minio-data:

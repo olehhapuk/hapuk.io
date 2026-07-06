@@ -1,0 +1,131 @@
+# Production deployment for hapuk.io.
+#
+# Services:
+#   postgres     – PostgreSQL 16 (persistent volume, healthcheck)
+#   minio        – S3-compatible object storage for signatures & PDFs
+#   minio-setup  – one-shot: creates the bucket + makes objects publicly downloadable
+#   migrate      – one-shot: applies Drizzle migrations, then exits (app waits for it)
+#   app          – the Next.js standalone server + headless Chromium (PDF export)
+#
+# Quick start:
+#   1. cp .env.example .env   and fill in real values (see notes below)
+#   2. docker compose up -d --build
+#
+# The `app` and `migrate` services read secrets from `.env` (env_file). This compose
+# only *overrides* the couple of values that must point at the in-network services
+# (DATABASE_URL → postgres). Everything else comes from your `.env`.
+#
+# ── Using a managed database or S3 instead of the bundled ones ──────────────────
+# • Managed Postgres (RDS/Neon/etc.): delete the `postgres` service, drop the
+#   `depends_on: postgres` entries, and set DATABASE_URL in `.env` to the remote DSN.
+# • AWS S3 / Cloudflare R2: delete `minio` + `minio-setup`, unset S3_ENDPOINT (for AWS)
+#   or point it at your provider, and put real credentials in `.env`.
+#
+# ── S3_ENDPOINT must be BROWSER-reachable ───────────────────────────────────────
+# Signature uploads use presigned PUT URLs and PDFs are served from public GET URLs,
+# so S3_ENDPOINT has to be a hostname the *browser* can resolve — a public domain
+# (e.g. https://storage.hapuk.io), NOT the internal `http://minio:9000`. If you expose
+# the bundled MinIO publicly, set S3_ENDPOINT to that public URL in `.env`; the app
+# container reaches it over the same URL.
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hapuk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-hapuk}
+    volumes:
+      - ${POSTGRES_STORAGE}:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-hapuk} -d ${POSTGRES_DB:-hapuk}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
+      MINIO_SITE_REGION: ${AWS_REGION:-eu-central-1}
+    ports:
+      - "9000:9000" # S3 API (expose publicly + put behind TLS for presigned URLs)
+      - "9001:9001" # web console
+    volumes:
+      - ${MINIO_STORAGE}:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Creates the bucket and makes objects publicly downloadable, then exits.
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID:-minioadmin} ${AWS_SECRET_ACCESS_KEY:-minioadmin}; do echo 'waiting for minio...'; sleep 1; done;
+      mc mb --ignore-existing local/${S3_BUCKET:-hapuk-uploads};
+      mc anonymous set download local/${S3_BUCKET:-hapuk-uploads};
+      echo 'minio bucket ready';
+      exit 0;
+      "
+    restart: "no"
+
+  # Applies pending Drizzle migrations against Postgres, then exits 0.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-hapuk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hapuk}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Point the app at the in-network Postgres (overrides DATABASE_URL from .env).
+      DATABASE_URL: postgres://${POSTGRES_USER:-hapuk}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hapuk}
+      # BETTER_AUTH_SECRET, BETTER_AUTH_URL, APP_URL, RESEND_API_KEY, EMAIL_FROM,
+      # AWS_REGION, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_ENDPOINT
+      # all come from .env (see the S3_ENDPOINT note at the top of this file).
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s

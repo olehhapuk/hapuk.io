@@ -25,6 +25,19 @@ ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
     BETTER_AUTH_URL=http://localhost:3000
 RUN pnpm build
 
+# ---- migrator: lightweight image to run Drizzle migrations ----
+# Has drizzle-kit (a devDependency, present in the deps node_modules) plus the config,
+# schema and generated SQL — everything `pnpm db:migrate` needs, without the heavy
+# Playwright/Chromium runtime. Run as a one-shot before the app starts.
+FROM node:22-bookworm-slim AS migrator
+WORKDIR /app
+RUN corepack enable
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json pnpm-lock.yaml drizzle.config.ts ./
+COPY drizzle ./drizzle
+COPY src ./src
+CMD ["pnpm", "db:migrate"]
+
 # ---- runner: Playwright image (bundles Chromium + deps) ----
 FROM mcr.microsoft.com/playwright:v1.61.1-noble AS runner
 WORKDIR /app

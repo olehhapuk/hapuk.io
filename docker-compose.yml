@@ -37,7 +37,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-hapuk}
     volumes:
-      - ${POSTGRES_STORAGE}:/var/lib/postgresql/data
+      - ${POSTGRES_STORAGE:-./pg-data}:/var/lib/postgresql/data
     healthcheck:
       test:
         [
@@ -57,10 +57,10 @@ services:
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
       MINIO_SITE_REGION: ${AWS_REGION:-eu-central-1}
     ports:
-      - "9000:9000" # S3 API (expose publicly + put behind TLS for presigned URLs)
-      - "9001:9001" # web console
+      - "${MINIO_API_PORT:-9000}:9000" # S3 API (expose publicly + put behind TLS for presigned URLs)
+      - "${MINIO_ADMIN_PORT:-9001}:9001" # web console
     volumes:
-      - ${MINIO_STORAGE}:/data
+      - ${MINIO_STORAGE:-./minio-data}:/data
     healthcheck:
       test: ["CMD-SHELL", "mc ready local || exit 1"]
       interval: 10s
@@ -111,7 +111,7 @@ services:
       # AWS_REGION, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_ENDPOINT
       # all come from .env (see the S3_ENDPOINT note at the top of this file).
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy

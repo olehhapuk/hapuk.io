@@ -7,10 +7,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { LoginForm } from '@/components/auth/login-form';
+import { redirectIfAuthenticated } from '@/server/auth/session';
 
 export const metadata: Metadata = { title: 'Sign in — hapuk.io' };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  await redirectIfAuthenticated();
+
   return (
     <Card>
       <CardHeader>

@@ -29,14 +29,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Signed-in users shouldn't see login/register; let them finish verify/reset flows.
-  if (
-    hasSession &&
-    (pathname.startsWith('/login') || pathname.startsWith('/register'))
-  ) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
   return NextResponse.next();
 }
 

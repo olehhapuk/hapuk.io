@@ -19,3 +19,15 @@ export async function requireUser(): Promise<ServerSession> {
   if (!session) redirect('/login');
   return session;
 }
+
+/**
+ * Redirects away from auth pages (login/register) when a *valid* session exists.
+ *
+ * Uses the real session (same source of truth as requireUser), not just cookie
+ * presence — otherwise a stale/invalid session cookie would ping-pong forever
+ * between the edge redirect here and requireUser()'s redirect back to /login.
+ */
+export async function redirectIfAuthenticated(to = '/dashboard'): Promise<void> {
+  const session = await getSession();
+  if (session) redirect(to);
+}

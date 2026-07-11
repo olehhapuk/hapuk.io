@@ -29,13 +29,11 @@ export const projectSchema = z.object({
   senderPhone: optionalText(50),
   senderEmail: z.email('Enter a valid email').optional().or(z.literal('')),
 
-  currency: z
-    .string()
-    .regex(/^[A-Za-z]{3}$/, 'Use a 3-letter code like USD'),
+  currency: z.string().regex(/^[A-Za-z]{3}$/, 'Use a 3-letter code like USD'),
   // Language for this project's invoice templates.
   locale: z.enum(locales),
   defaultRate: optionalMoney,
-  defaultNotes: optionalText(1000),
+  defaultNotes: optionalText(5000),
   defaultDueDays: z
     .string()
     .regex(/^\d{1,3}$/, 'Enter a whole number of days')

@@ -91,7 +91,9 @@ export function OrgLocaleForm({
                 <FormLabel>Address</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={fallback.receiverAddress || 'Street, city, country'}
+                    placeholder={
+                      fallback.receiverAddress || 'Street, city, country'
+                    }
                     {...field}
                   />
                 </FormControl>
@@ -99,10 +101,6 @@ export function OrgLocaleForm({
               </FormItem>
             )}
           />
-          <p className="text-sm text-muted-foreground">
-            Tax ID, phone, and email are shared across languages — edit them in the
-            profile above.
-          </p>
 
           <FormField
             control={form.control}
@@ -113,13 +111,15 @@ export function OrgLocaleForm({
                 <FormControl>
                   <Input
                     placeholder={
-                      fallback.signatureLabel || 'Printed name under the signature'
+                      fallback.signatureLabel ||
+                      'Printed name under the signature'
                     }
                     {...field}
                   />
                 </FormControl>
                 <FormDescription>
-                  Shown beneath the signature image on invoices in this language.
+                  Shown beneath the signature image on invoices in this
+                  language.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

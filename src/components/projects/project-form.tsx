@@ -24,7 +24,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -139,9 +138,6 @@ export function ProjectForm({
                       }}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Unique within this organization.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -164,14 +160,6 @@ export function ProjectForm({
               </FormItem>
             )}
           />
-
-          <div className="grid gap-1">
-            <h3 className="text-sm font-medium">Sender details</h3>
-            <p className="text-sm text-muted-foreground">
-              The client this project bills. Prefills the &quot;Sender&quot;
-              block on new invoices.
-            </p>
-          </div>
 
           <FormField
             control={form.control}
@@ -241,13 +229,6 @@ export function ProjectForm({
             />
           </div>
 
-          <div className="grid gap-1">
-            <h3 className="text-sm font-medium">Invoice defaults</h3>
-            <p className="text-sm text-muted-foreground">
-              Applied when composing a new invoice for this project.
-            </p>
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField
               control={form.control}
@@ -274,9 +255,12 @@ export function ProjectForm({
                 <FormItem>
                   <FormLabel>Default rate</FormLabel>
                   <FormControl>
-                    <Input placeholder="100.00" inputMode="decimal" {...field} />
+                    <Input
+                      placeholder="100.00"
+                      inputMode="decimal"
+                      {...field}
+                    />
                   </FormControl>
-                  <FormDescription>Per unit; optional.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -318,9 +302,6 @@ export function ProjectForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    Language used for this project&apos;s invoices.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -339,9 +320,6 @@ export function ProjectForm({
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>
-                  Prefills the notes field on new invoices.
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

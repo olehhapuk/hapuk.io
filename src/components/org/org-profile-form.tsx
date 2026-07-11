@@ -89,13 +89,6 @@ export function OrgProfileForm({
             />
           </div>
 
-          <div className="grid gap-1">
-            <h3 className="text-sm font-medium">Invoice receiver details</h3>
-            <p className="text-sm text-muted-foreground">
-              These prefill the &quot;Receiver&quot; block on new invoices.
-            </p>
-          </div>
-
           <FormField
             control={form.control}
             name="receiverName"

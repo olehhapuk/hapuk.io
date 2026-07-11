@@ -9,7 +9,10 @@
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
+# pnpm-workspace.yaml carries the build-script approvals (onlyBuiltDependencies /
+# ignoredBuiltDependencies). Without it, pnpm treats esbuild/sharp/unrs-resolver as
+# unapproved and fails a fresh --frozen-lockfile install with ERR_PNPM_IGNORED_BUILDS.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ---- build: compile Next.js (standalone output) ----
@@ -33,7 +36,7 @@ FROM node:22-bookworm-slim AS migrator
 WORKDIR /app
 RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json pnpm-lock.yaml drizzle.config.ts ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml drizzle.config.ts ./
 COPY drizzle ./drizzle
 COPY src ./src
 CMD ["pnpm", "db:migrate"]

@@ -10,9 +10,17 @@ import { toast } from 'sonner';
 import { slugify } from '@/lib/validations/organization';
 import { projectSchema, type ProjectInput } from '@/lib/validations/project';
 import { createProject, updateProject } from '@/server/actions/projects';
+import { locales, localeLabels } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -33,6 +41,7 @@ export const emptyProject: ProjectInput = {
   senderPhone: '',
   senderEmail: '',
   currency: 'USD',
+  locale: 'en',
   defaultRate: '',
   defaultNotes: '',
   defaultDueDays: '30',
@@ -281,6 +290,37 @@ export function ProjectForm({
                   <FormControl>
                     <Input inputMode="numeric" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="locale"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invoice language</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={!canManage}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {locales.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {localeLabels[code]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Language used for this project&apos;s invoices.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

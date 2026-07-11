@@ -3,6 +3,7 @@ import type {
   InvoiceRow,
 } from '@/server/db/queries/invoices';
 import type { PartySnapshot, SignatureSnapshot } from '@/server/db/schema/app';
+import { toLocale, type Locale } from '@/lib/i18n';
 
 /**
  * Normalized, self-contained invoice document handed to a template. Built entirely
@@ -12,6 +13,7 @@ import type { PartySnapshot, SignatureSnapshot } from '@/server/db/schema/app';
 export type InvoiceDocument = {
   number: number | null;
   status: string;
+  locale: Locale;
   issueDate: string;
   dueDate: string;
   currency: string;
@@ -42,6 +44,7 @@ export function toInvoiceDocument(
   return {
     number: invoice.number,
     status: invoice.status,
+    locale: toLocale(invoice.locale),
     issueDate: invoice.issueDate,
     dueDate: invoice.dueDate,
     currency: invoice.currency,

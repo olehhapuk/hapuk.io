@@ -3,6 +3,8 @@
  * handled as integer cents in app code — never as JS floats (see README data model).
  */
 
+import { intlLocale, type Locale } from '@/lib/i18n';
+
 /** Parse a "100" / "100.50" string to integer cents. Non-numeric => 0. */
 export function toCents(value: string | null | undefined): number {
   if (!value) return 0;
@@ -27,15 +29,19 @@ export function lineTotalCents(qty: string, rate: string): number {
   return Math.round(qtyNum * toCents(rate));
 }
 
-/** Human-facing currency formatting; falls back gracefully for odd codes. */
+/**
+ * Human-facing currency formatting; falls back gracefully for odd codes.
+ * `locale` controls grouping/decimal separators and symbol placement (default English).
+ */
 export function formatMoney(
   value: string | number | null | undefined,
   currency: string,
+  locale: Locale = 'en',
 ): string {
   const num = typeof value === 'string' ? Number(value) : (value ?? 0);
   const safe = Number.isFinite(num) ? (num as number) : 0;
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(intlLocale[locale], {
       style: 'currency',
       currency: currency.toUpperCase(),
     }).format(safe);

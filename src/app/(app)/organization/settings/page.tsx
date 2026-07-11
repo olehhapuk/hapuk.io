@@ -8,8 +8,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { OrgProfileForm } from '@/components/org/org-profile-form';
+import { OrgLocaleForm } from '@/components/org/org-locale-form';
 import { SignatureManager } from '@/components/org/signature-manager';
-import type { OrgProfileInput } from '@/lib/validations/organization';
+import type {
+  OrgLocaleInput,
+  OrgProfileInput,
+} from '@/lib/validations/organization';
+import { DEFAULT_LOCALE, locales, localeLabels } from '@/lib/i18n';
+import { getOrgLocaleOverrides } from '@/server/db/queries/organization';
 
 export const metadata: Metadata = { title: 'Organization settings — hapuk.io' };
 
@@ -39,6 +45,15 @@ export default async function OrganizationSettingsPage() {
     signatureLabel: org.signatureLabel ?? '',
   };
 
+  // The base fields above are the default-language values; other languages override them.
+  const overrides = await getOrgLocaleOverrides(org.id);
+  const otherLocales = locales.filter((l) => l !== DEFAULT_LOCALE);
+  const fallback = {
+    receiverName: org.receiverName ?? org.name,
+    receiverAddress: org.receiverAddress ?? '',
+    signatureLabel: org.signatureLabel ?? '',
+  };
+
   return (
     <div className="grid max-w-3xl gap-6">
       <div>
@@ -52,9 +67,11 @@ export default async function OrganizationSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
+          <CardTitle>Profile ({localeLabels[DEFAULT_LOCALE]})</CardTitle>
           <CardDescription>
-            Your organization&apos;s identity and invoice receiver details.
+            Your organization&apos;s identity and invoice receiver details, in
+            your default language. Invoices in another language fall back to
+            these when a translation is left blank.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -65,6 +82,35 @@ export default async function OrganizationSettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {otherLocales.map((code) => {
+        const row = overrides[code];
+        const localeDefaults: OrgLocaleInput = {
+          receiverName: row?.receiverName ?? '',
+          receiverAddress: row?.receiverAddress ?? '',
+          signatureLabel: row?.signatureLabel ?? '',
+        };
+        return (
+          <Card key={code}>
+            <CardHeader>
+              <CardTitle>Receiver details ({localeLabels[code]})</CardTitle>
+              <CardDescription>
+                Used on invoices for projects set to {localeLabels[code]}. Leave
+                a field blank to reuse the default-language value (shown as a
+                placeholder).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OrgLocaleForm
+                locale={code}
+                canManage={manage}
+                defaultValues={localeDefaults}
+                fallback={fallback}
+              />
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <Card>
         <CardHeader>

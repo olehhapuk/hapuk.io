@@ -11,6 +11,8 @@ import {
 } from '@/server/db/queries/projects';
 import type { InvoiceInput } from '@/lib/validations/invoice';
 import { todayISO, addDaysISO } from '@/lib/date';
+import { DEFAULT_LOCALE } from '@/lib/i18n';
+import { getOrgLocaleOverride } from '@/server/db/queries/organization';
 import {
   Card,
   CardContent,
@@ -101,6 +103,21 @@ export default async function NewInvoicePage({
 
   const org = organization as typeof organization & OrgReceiver;
 
+  // Prefill the receiver block from the org's details for the project's language.
+  // Name/address are translatable (fall back to the default language when blank);
+  // tax ID / phone / email are shared across languages and always come from the org.
+  const override =
+    project.locale === DEFAULT_LOCALE
+      ? null
+      : await getOrgLocaleOverride(org.id, project.locale);
+  const receiver = {
+    name: override?.receiverName ?? org.receiverName ?? org.name,
+    address: override?.receiverAddress ?? org.receiverAddress ?? '',
+    taxId: org.receiverTaxId ?? '',
+    phone: org.receiverPhone ?? '',
+    email: org.receiverEmail ?? '',
+  };
+
   const issueDate = todayISO();
   const dueDate = addDaysISO(issueDate, project.defaultDueDays);
 
@@ -130,11 +147,11 @@ export default async function NewInvoicePage({
     senderTaxId: project.senderTaxId ?? '',
     senderPhone: project.senderPhone ?? '',
     senderEmail: project.senderEmail ?? '',
-    receiverName: org.receiverName ?? org.name,
-    receiverAddress: org.receiverAddress ?? '',
-    receiverTaxId: org.receiverTaxId ?? '',
-    receiverPhone: org.receiverPhone ?? '',
-    receiverEmail: org.receiverEmail ?? '',
+    receiverName: receiver.name,
+    receiverAddress: receiver.address,
+    receiverTaxId: receiver.taxId,
+    receiverPhone: receiver.phone,
+    receiverEmail: receiver.email,
     notes: project.defaultNotes ?? '',
     items,
   };

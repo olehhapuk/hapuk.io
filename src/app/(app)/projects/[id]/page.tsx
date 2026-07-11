@@ -45,6 +45,7 @@ export default async function ProjectDetailPage({
     senderPhone: project.senderPhone ?? '',
     senderEmail: project.senderEmail ?? '',
     currency: project.currency,
+    locale: project.locale,
     defaultRate: project.defaultRate ?? '',
     defaultNotes: project.defaultNotes ?? '',
     defaultDueDays: String(project.defaultDueDays),

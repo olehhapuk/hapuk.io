@@ -25,6 +25,18 @@ export const orgProfileSchema = z.object({
 });
 export type OrgProfileInput = z.infer<typeof orgProfileSchema>;
 
+/**
+ * Per-language override of the org's translatable invoice receiver details (name,
+ * address) + signature label. Tax ID / phone / email are language-neutral and stay on
+ * the org profile. All fields optional — empty ones fall back to the default language.
+ */
+export const orgLocaleSchema = z.object({
+  receiverName: z.string().max(200).optional().or(z.literal('')),
+  receiverAddress: z.string().max(500).optional().or(z.literal('')),
+  signatureLabel: z.string().max(200).optional().or(z.literal('')),
+});
+export type OrgLocaleInput = z.infer<typeof orgLocaleSchema>;
+
 export const inviteMemberSchema = z.object({
   email: z.email('Enter a valid email'),
   role: z.enum(['admin', 'member']),

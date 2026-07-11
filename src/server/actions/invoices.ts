@@ -6,6 +6,8 @@ import { revalidatePath } from 'next/cache';
 import { db, schema } from '@/server/db';
 import { assertRole, requireOrgContext } from '@/server/db/queries/context';
 import { getActiveOrganization } from '@/server/auth/org';
+import { getOrgLocaleOverride } from '@/server/db/queries/organization';
+import { DEFAULT_LOCALE } from '@/lib/i18n';
 import {
   invoiceNumberSchema,
   invoiceSchema,
@@ -82,9 +84,9 @@ export async function createInvoice(
   const parsed = invoiceSchema.safeParse(input);
   if (!parsed.success) return { error: 'Please check the form and try again.' };
 
-  // Project must belong to the active org.
+  // Project must belong to the active org. Its language is snapshotted onto the invoice.
   const [project] = await db
-    .select({ id: schema.project.id })
+    .select({ id: schema.project.id, locale: schema.project.locale })
     .from(schema.project)
     .where(
       and(
@@ -105,6 +107,7 @@ export async function createInvoice(
         projectId,
         status: 'draft',
         templateKey: TEMPLATE_KEY,
+        locale: project.locale,
         ...fields,
       })
       .returning({ id: schema.invoice.id });
@@ -197,6 +200,7 @@ export async function finalizeInvoice(id: string): Promise<ActionResult> {
       id: schema.invoice.id,
       status: schema.invoice.status,
       projectId: schema.invoice.projectId,
+      locale: schema.invoice.locale,
     })
     .from(schema.invoice)
     .where(
@@ -211,14 +215,21 @@ export async function finalizeInvoice(id: string): Promise<ActionResult> {
     return { error: 'This invoice is already finalized.' };
   }
 
-  // Snapshot the org's current signature at finalize time.
+  // Snapshot the org's current signature at finalize time, using the localized label
+  // for the invoice's language (falling back to the default-language label).
   const org = (await getActiveOrganization()) as
     | ({ signatureImageUrl?: string | null; signatureLabel?: string | null })
     | null;
+  const localeOverride =
+    existing.locale === DEFAULT_LOCALE
+      ? null
+      : await getOrgLocaleOverride(ctx.organizationId, existing.locale);
+  const signatureLabel =
+    localeOverride?.signatureLabel ?? org?.signatureLabel ?? undefined;
   const signatureSnapshot: SignatureSnapshot | null = org?.signatureImageUrl
     ? {
         imageUrl: org.signatureImageUrl,
-        label: org.signatureLabel ?? undefined,
+        label: signatureLabel,
       }
     : null;
 

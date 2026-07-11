@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { slugSchema } from './organization';
+import { locales } from '@/lib/i18n';
 
 /** Optional free-text field: allows empty string, capped length. */
 const optionalText = (max: number) =>
@@ -31,6 +32,8 @@ export const projectSchema = z.object({
   currency: z
     .string()
     .regex(/^[A-Za-z]{3}$/, 'Use a 3-letter code like USD'),
+  // Language for this project's invoice templates.
+  locale: z.enum(locales),
   defaultRate: optionalMoney,
   defaultNotes: optionalText(1000),
   defaultDueDays: z

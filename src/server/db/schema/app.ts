@@ -25,6 +25,10 @@ export const invoiceStatus = pgEnum('invoice_status', [
   'unpaid',
 ]);
 
+// Document language. Set per project; snapshotted onto each invoice at creation so
+// the template renders in that language. Keep in sync with `locales` in src/lib/i18n.ts.
+export const locale = pgEnum('locale', ['en', 'uk']);
+
 /** Frozen party block copied onto an invoice at finalize. */
 export type PartySnapshot = {
   name: string;
@@ -73,6 +77,8 @@ export const project = pgTable(
 
     // Invoice defaults:
     currency: text('currency').notNull().default('USD'),
+    // Language for this project's invoice templates (see locale enum above).
+    locale: locale('locale').notNull().default('en'),
     defaultRate: numeric('default_rate', { precision: 12, scale: 2 }),
     defaultNotes: text('default_notes'),
     defaultDueDays: integer('default_due_days').notNull().default(30),
@@ -125,6 +131,9 @@ export const invoice = pgTable(
     issueDate: date('issue_date').notNull(),
     dueDate: date('due_date').notNull(),
     currency: text('currency').notNull(),
+    // Snapshotted from the project at creation so historical invoices render stably
+    // even if the project language changes later.
+    locale: locale('locale').notNull().default('en'),
     subtotal: numeric('subtotal', { precision: 12, scale: 2 }).notNull(),
     total: numeric('total', { precision: 12, scale: 2 }).notNull(),
     notes: text('notes'),
@@ -162,3 +171,35 @@ export const invoiceItem = pgTable('invoice_item', {
   lineTotal: numeric('line_total', { precision: 12, scale: 2 }).notNull(),
   position: integer('position').notNull().default(0),
 });
+
+/**
+ * Per-language overrides of an organization's translatable invoice RECEIVER details
+ * (name, address) + signature label. The base columns on `organization` hold the
+ * default-language ('en') values; a row here overrides them for another language, and
+ * empty fields fall back to the base. Tax ID / phone / email are language-neutral and
+ * stay on `organization` — they are never overridden per language.
+ * New invoices prefill the receiver block from the row matching the project's language.
+ */
+export const organizationLocale = pgTable(
+  'organization_locale',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organization.id, { onDelete: 'cascade' }),
+    locale: locale('locale').notNull(),
+
+    receiverName: text('receiver_name'),
+    receiverAddress: text('receiver_address'),
+    signatureLabel: text('signature_label'),
+
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('organization_locale_org_locale_unique').on(
+      t.organizationId,
+      t.locale,
+    ),
+  ],
+);

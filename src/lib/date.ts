@@ -1,9 +1,18 @@
 import { addDays, format, parseISO } from 'date-fns';
+import { enUS, uk } from 'date-fns/locale';
+import type { Locale } from '@/lib/i18n';
 
-/** 'yyyy-MM-dd' → 'MMM d, yyyy' for display; passthrough on parse failure. */
-export function formatDate(iso: string): string {
+const dateFnsLocale = { en: enUS, uk } as const;
+
+/**
+ * 'yyyy-MM-dd' → localized display date; passthrough on parse failure.
+ * English keeps 'MMM d, yyyy' (e.g. "Jul 11, 2026"); other languages use their
+ * conventional order (e.g. Ukrainian "11 лип. 2026 р.").
+ */
+export function formatDate(iso: string, locale: Locale = 'en'): string {
   try {
-    return format(parseISO(iso), 'MMM d, yyyy');
+    const pattern = locale === 'en' ? 'MMM d, yyyy' : 'd MMM yyyy';
+    return format(parseISO(iso), pattern, { locale: dateFnsLocale[locale] });
   } catch {
     return iso;
   }

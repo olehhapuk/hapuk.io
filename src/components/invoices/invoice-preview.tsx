@@ -5,12 +5,16 @@ import type {
 import type { PartySnapshot } from '@/server/db/schema/app';
 import { formatMoney } from '@/lib/money';
 import { formatDate } from '@/lib/date';
+import { toLocale } from '@/lib/i18n';
+import { templateStrings } from '@/templates/i18n';
 
 function PartyBlock({
   label,
+  taxIdLabel,
   party,
 }: {
   label: string;
+  taxIdLabel: string;
   party: PartySnapshot | null;
 }) {
   return (
@@ -23,7 +27,9 @@ function PartyBlock({
         <p className="text-muted-foreground">{party.address}</p>
       ) : null}
       {party?.taxId ? (
-        <p className="text-muted-foreground">Tax ID: {party.taxId}</p>
+        <p className="text-muted-foreground">
+          {taxIdLabel}: {party.taxId}
+        </p>
       ) : null}
       {party?.phone ? (
         <p className="text-muted-foreground">{party.phone}</p>
@@ -47,19 +53,35 @@ export function InvoicePreview({
   items: InvoiceItemRow[];
 }) {
   const { currency } = invoice;
+  const locale = toLocale(invoice.locale);
+  const t = templateStrings(locale);
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <PartyBlock label="Sender" party={invoice.senderSnapshot} />
-        <PartyBlock label="Receiver" party={invoice.receiverSnapshot} />
+        <PartyBlock
+          label={t.sender}
+          taxIdLabel={t.taxId}
+          party={invoice.senderSnapshot}
+        />
+        <PartyBlock
+          label={t.receiver}
+          taxIdLabel={t.taxId}
+          party={invoice.receiverSnapshot}
+        />
       </div>
 
       <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
         <span className="text-muted-foreground">
-          Issued <span className="text-foreground">{formatDate(invoice.issueDate)}</span>
+          {t.issued}{' '}
+          <span className="text-foreground">
+            {formatDate(invoice.issueDate, locale)}
+          </span>
         </span>
         <span className="text-muted-foreground">
-          Due <span className="text-foreground">{formatDate(invoice.dueDate)}</span>
+          {t.due}{' '}
+          <span className="text-foreground">
+            {formatDate(invoice.dueDate, locale)}
+          </span>
         </span>
       </div>
 
@@ -67,10 +89,10 @@ export function InvoicePreview({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
-              <th className="py-2 font-medium">Description</th>
-              <th className="py-2 text-right font-medium">Qty</th>
-              <th className="py-2 text-right font-medium">Rate</th>
-              <th className="py-2 text-right font-medium">Line total</th>
+              <th className="py-2 font-medium">{t.service}</th>
+              <th className="py-2 text-right font-medium">{t.qty}</th>
+              <th className="py-2 text-right font-medium">{t.rate}</th>
+              <th className="py-2 text-right font-medium">{t.lineTotal}</th>
             </tr>
           </thead>
           <tbody>
@@ -79,10 +101,10 @@ export function InvoicePreview({
                 <td className="py-2">{item.description}</td>
                 <td className="py-2 text-right tabular-nums">{item.qty}</td>
                 <td className="py-2 text-right tabular-nums">
-                  {formatMoney(item.rate, currency)}
+                  {formatMoney(item.rate, currency, locale)}
                 </td>
                 <td className="py-2 text-right tabular-nums">
-                  {formatMoney(item.lineTotal, currency)}
+                  {formatMoney(item.lineTotal, currency, locale)}
                 </td>
               </tr>
             ))}
@@ -93,15 +115,15 @@ export function InvoicePreview({
       <div className="flex justify-end">
         <div className="grid gap-1 text-sm">
           <div className="flex justify-between gap-12">
-            <span className="text-muted-foreground">Subtotal</span>
+            <span className="text-muted-foreground">{t.subtotal}</span>
             <span className="tabular-nums">
-              {formatMoney(invoice.subtotal, currency)}
+              {formatMoney(invoice.subtotal, currency, locale)}
             </span>
           </div>
           <div className="flex justify-between gap-12 text-base font-semibold">
-            <span>Total</span>
+            <span>{t.total}</span>
             <span className="tabular-nums">
-              {formatMoney(invoice.total, currency)}
+              {formatMoney(invoice.total, currency, locale)}
             </span>
           </div>
         </div>
@@ -110,7 +132,7 @@ export function InvoicePreview({
       {invoice.notes ? (
         <div className="grid gap-1 text-sm">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Notes
+            {t.terms}
           </p>
           <p className="whitespace-pre-wrap text-muted-foreground">
             {invoice.notes}

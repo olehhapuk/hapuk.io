@@ -1,7 +1,9 @@
 import { formatMoney } from '@/lib/money';
 import { formatDate } from '@/lib/date';
 import { formatInvoiceNumber, type InvoiceDocument } from './types';
+import { statusLabel, templateStrings } from './i18n';
 import type { PartySnapshot } from '@/server/db/schema/app';
+import type { Locale } from '@/lib/i18n';
 
 /**
  * Self-contained, print-optimized invoice stylesheet. Explicit light-mode colors and
@@ -52,24 +54,35 @@ const CLASSIC_CSS = `
 .invoice-doc .sign .sigline { border-top: 1px solid var(--ink); padding-top: 6px; font-size: 11px; color: var(--muted); }
 `;
 
-function Party({ label, party }: { label: string; party: PartySnapshot | null }) {
+function Party({
+  label,
+  taxIdLabel,
+  party,
+}: {
+  label: string;
+  taxIdLabel: string;
+  party: PartySnapshot | null;
+}) {
   return (
     <div className="party">
       <div className="label">{label}</div>
       <div className="name">{party?.name ?? '—'}</div>
       {party?.address ? <div className="line">{party.address}</div> : null}
-      {party?.taxId ? <div className="line">Tax ID: {party.taxId}</div> : null}
+      {party?.taxId ? (
+        <div className="line">
+          {taxIdLabel}: {party.taxId}
+        </div>
+      ) : null}
       {party?.phone ? <div className="line">{party.phone}</div> : null}
       {party?.email ? <div className="line">{party.email}</div> : null}
     </div>
   );
 }
 
-const DEFAULT_TERMS =
-  'Payment is due by the date shown above. Thank you for your business.';
-
 export function ClassicTemplate({ doc }: { doc: InvoiceDocument }) {
   const { currency } = doc;
+  const locale: Locale = doc.locale;
+  const t = templateStrings(locale);
   const amountDue = doc.status === 'paid' ? '0.00' : doc.total;
 
   return (
@@ -78,31 +91,37 @@ export function ClassicTemplate({ doc }: { doc: InvoiceDocument }) {
 
       <div className="header">
         <div>
-          <div className="title">INVOICE</div>
+          <div className="title">{t.invoice}</div>
           {doc.sender?.name ? <div className="brand">{doc.sender.name}</div> : null}
         </div>
         <div className="meta">
-          <div className="num">{formatInvoiceNumber(doc.number)}</div>
-          <div>Issued: {formatDate(doc.issueDate)}</div>
-          <div>Due: {formatDate(doc.dueDate)}</div>
-          <div className="status">{doc.status}</div>
+          <div className="num">
+            {doc.number != null ? formatInvoiceNumber(doc.number) : t.draft}
+          </div>
+          <div>
+            {t.issued}: {formatDate(doc.issueDate, locale)}
+          </div>
+          <div>
+            {t.due}: {formatDate(doc.dueDate, locale)}
+          </div>
+          <div className="status">{statusLabel(locale, doc.status)}</div>
         </div>
       </div>
 
       <div className="rule" />
 
       <div className="parties">
-        <Party label="Sender" party={doc.sender} />
-        <Party label="Receiver" party={doc.receiver} />
+        <Party label={t.sender} taxIdLabel={t.taxId} party={doc.sender} />
+        <Party label={t.receiver} taxIdLabel={t.taxId} party={doc.receiver} />
       </div>
 
       <table>
         <thead>
           <tr>
-            <th>Service</th>
-            <th className="num-col">Qty</th>
-            <th className="num-col">Rate</th>
-            <th className="num-col">Line total</th>
+            <th>{t.service}</th>
+            <th className="num-col">{t.qty}</th>
+            <th className="num-col">{t.rate}</th>
+            <th className="num-col">{t.lineTotal}</th>
           </tr>
         </thead>
         <tbody>
@@ -110,8 +129,10 @@ export function ClassicTemplate({ doc }: { doc: InvoiceDocument }) {
             <tr key={i}>
               <td>{item.description}</td>
               <td className="num-col">{item.qty}</td>
-              <td className="num-col">{formatMoney(item.rate, currency)}</td>
-              <td className="num-col">{formatMoney(item.lineTotal, currency)}</td>
+              <td className="num-col">{formatMoney(item.rate, currency, locale)}</td>
+              <td className="num-col">
+                {formatMoney(item.lineTotal, currency, locale)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -119,27 +140,29 @@ export function ClassicTemplate({ doc }: { doc: InvoiceDocument }) {
 
       <div className="totals">
         <div className="row">
-          <span>Subtotal</span>
-          <span className="num-col">{formatMoney(doc.subtotal, currency)}</span>
+          <span>{t.subtotal}</span>
+          <span className="num-col">
+            {formatMoney(doc.subtotal, currency, locale)}
+          </span>
         </div>
         <div className="row grand">
-          <span>Total</span>
-          <span className="num-col">{formatMoney(doc.total, currency)}</span>
+          <span>{t.total}</span>
+          <span className="num-col">{formatMoney(doc.total, currency, locale)}</span>
         </div>
         <div className="row due">
-          <span>Amount due</span>
-          <span className="num-col">{formatMoney(amountDue, currency)}</span>
+          <span>{t.amountDue}</span>
+          <span className="num-col">{formatMoney(amountDue, currency, locale)}</span>
         </div>
       </div>
 
       <div className="terms">
-        <div className="label">Terms</div>
-        <p>{doc.notes?.trim() || DEFAULT_TERMS}</p>
+        <div className="label">{t.terms}</div>
+        <p>{doc.notes?.trim() || t.defaultTerms}</p>
       </div>
 
       <div className="signatures">
         <div className="sign">
-          <div className="sigline">Sender</div>
+          <div className="sigline">{t.sender}</div>
         </div>
         <div className="sign">
           {doc.signature?.imageUrl ? (
@@ -148,9 +171,7 @@ export function ClassicTemplate({ doc }: { doc: InvoiceDocument }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={doc.signature.imageUrl} alt="Signature" />
           ) : null}
-          <div className="sigline">
-            {doc.signature?.label || 'Receiver'}
-          </div>
+          <div className="sigline">{doc.signature?.label || t.receiver}</div>
         </div>
       </div>
     </div>

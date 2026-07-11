@@ -15,6 +15,13 @@
       "when": 1782999731079,
       "tag": "0001_add_invitation_created_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783796937967,
+      "tag": "0002_safe_gauntlet",
+      "breakpoints": true
     }
   ]
 }

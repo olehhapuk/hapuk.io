@@ -21,6 +21,7 @@ import {
   type ServiceOption,
 } from '@/components/invoices/invoice-form';
 import { InvoicePreview } from '@/components/invoices/invoice-preview';
+import { EditInvoiceNumber } from '@/components/invoices/edit-invoice-number';
 import { InvoiceStatusActions } from '@/components/invoices/invoice-status-actions';
 import { InvoiceStatusBadge } from '@/components/invoices/invoice-status-badge';
 
@@ -90,6 +91,12 @@ export default async function InvoiceDetailPage({
               Download PDF
             </a>
           </Button>
+          {manage && invoice.number != null ? (
+            <EditInvoiceNumber
+              invoiceId={invoice.id}
+              currentNumber={invoice.number}
+            />
+          ) : null}
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { db, schema } from '@/server/db';
 import { assertRole, requireOrgContext } from '@/server/db/queries/context';
 import { getActiveOrganization } from '@/server/auth/org';
 import {
+  invoiceNumberSchema,
   invoiceSchema,
   settleableStatuses,
   type InvoiceInput,
@@ -252,6 +253,100 @@ export async function finalizeInvoice(id: string): Promise<ActionResult> {
     });
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Could not finalize.' };
+  }
+
+  revalidatePath('/invoices');
+  revalidatePath(`/invoices/${id}`);
+  return {};
+}
+
+/**
+ * Changes a finalized invoice's number. Drafts have no number yet (they get one at
+ * finalize), so this only applies once finalized. The new number must be unique within
+ * the project; the project counter is bumped so future auto-numbering stays ahead of it.
+ */
+export async function setInvoiceNumber(
+  id: string,
+  input: number,
+): Promise<ActionResult> {
+  const ctx = await requireOrgContext();
+  assertRole(ctx, MANAGE_ROLES);
+
+  const parsed = invoiceNumberSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Enter a valid number.' };
+  }
+  const number = parsed.data;
+
+  const [existing] = await db
+    .select({
+      id: schema.invoice.id,
+      status: schema.invoice.status,
+      projectId: schema.invoice.projectId,
+      number: schema.invoice.number,
+    })
+    .from(schema.invoice)
+    .where(
+      and(
+        eq(schema.invoice.id, id),
+        eq(schema.invoice.organizationId, ctx.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!existing) return { error: 'Invoice not found.' };
+  if (existing.status === 'draft') {
+    return { error: 'Draft invoices are numbered when you finalize them.' };
+  }
+  if (existing.number === number) return {}; // no-op
+
+  try {
+    await db.transaction(async (tx) => {
+      const [clash] = await tx
+        .select({ id: schema.invoice.id })
+        .from(schema.invoice)
+        .where(
+          and(
+            eq(schema.invoice.projectId, existing.projectId),
+            eq(schema.invoice.number, number),
+          ),
+        )
+        .limit(1);
+      if (clash && clash.id !== id) {
+        throw new Error(`Invoice #${number} already exists in this project.`);
+      }
+
+      await tx
+        .update(schema.invoice)
+        .set({ number, updatedAt: new Date() })
+        .where(eq(schema.invoice.id, id));
+
+      // Keep the per-project counter at or above the highest number in use so a later
+      // finalize never auto-assigns a number that collides with this manual one.
+      await tx
+        .update(schema.project)
+        .set({
+          invoiceCounter: sql`greatest(${schema.project.invoiceCounter}, ${number})`,
+        })
+        .where(
+          and(
+            eq(schema.project.id, existing.projectId),
+            eq(schema.project.organizationId, ctx.organizationId),
+          ),
+        );
+    });
+  } catch (e) {
+    // Unique-index race (two concurrent renumbers to the same value).
+    if (
+      e &&
+      typeof e === 'object' &&
+      'code' in e &&
+      (e as { code?: string }).code === '23505'
+    ) {
+      return { error: `Invoice #${number} already exists in this project.` };
+    }
+    return {
+      error: e instanceof Error ? e.message : 'Could not update the number.',
+    };
   }
 
   revalidatePath('/invoices');

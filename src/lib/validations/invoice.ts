@@ -4,6 +4,13 @@ import { z } from 'zod';
 export const settleableStatuses = ['waiting', 'paid', 'unpaid'] as const;
 export type SettleableStatus = (typeof settleableStatuses)[number];
 
+/** A manually assigned invoice number. Positive whole number, within int4 range. */
+export const invoiceNumberSchema = z.coerce
+  .number({ message: 'Enter a number' })
+  .int('Use a whole number')
+  .positive('Must be greater than 0')
+  .max(2_147_483_647, 'That number is too large');
+
 const money = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, 'Enter an amount like 100 or 100.50');

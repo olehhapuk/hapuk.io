@@ -78,9 +78,3 @@ const dictionaries: Record<Locale, TemplateStrings> = { en, uk };
 export function templateStrings(locale: Locale): TemplateStrings {
   return dictionaries[locale];
 }
-
-/** Localized status label, tolerant of unknown status values. */
-export function statusLabel(locale: Locale, status: string): string {
-  const map = dictionaries[locale].status as Record<string, string>;
-  return map[status] ?? status;
-}

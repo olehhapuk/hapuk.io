@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/money';
 import { formatDate } from '@/lib/date';
 import { toLocale } from '@/lib/i18n';
 import { templateStrings } from '@/templates/i18n';
+import { renderNotes } from '@/templates/notes';
 
 function PartyBlock({
   label,
@@ -135,7 +136,15 @@ export function InvoicePreview({
             {t.terms}
           </p>
           <p className="whitespace-pre-wrap text-muted-foreground">
-            {invoice.notes}
+            {renderNotes(invoice.notes, {
+              issueDate: invoice.issueDate,
+              dueDate: invoice.dueDate,
+              currency: invoice.currency,
+              total: invoice.total,
+              sender: invoice.senderSnapshot,
+              receiver: invoice.receiverSnapshot,
+              locale,
+            })}
           </p>
         </div>
       ) : null}

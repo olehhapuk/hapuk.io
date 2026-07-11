@@ -17,11 +17,13 @@ import { Separator } from '@/components/ui/separator';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { NOTE_VARIABLE_TOKENS } from '@/templates/notes';
 import {
   Select,
   SelectContent,
@@ -322,6 +324,22 @@ export function InvoiceForm({
                   {...field}
                 />
               </FormControl>
+              <FormDescription>
+                <span className="block">
+                  Insert variables — they&apos;re filled in from the invoice
+                  (e.g. <code>{'{{dueDate}}'}</code> → the due date):
+                </span>
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {NOTE_VARIABLE_TOKENS.map((token) => (
+                    <code
+                      key={token}
+                      className="rounded bg-muted px-1.5 py-0.5 text-xs"
+                    >
+                      {token}
+                    </code>
+                  ))}
+                </span>
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -11,6 +11,7 @@ import { slugify } from '@/lib/validations/organization';
 import { projectSchema, type ProjectInput } from '@/lib/validations/project';
 import { createProject, updateProject } from '@/server/actions/projects';
 import { locales, localeLabels } from '@/lib/i18n';
+import { NOTE_VARIABLE_TOKENS } from '@/templates/notes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -320,6 +321,22 @@ export function ProjectForm({
                     {...field}
                   />
                 </FormControl>
+                <div className="text-sm text-muted-foreground">
+                  <span className="block">
+                    Variables like <code>{'{{dueDate}}'}</code> are filled in on
+                    each invoice:
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-1">
+                    {NOTE_VARIABLE_TOKENS.map((token) => (
+                      <code
+                        key={token}
+                        className="rounded bg-muted px-1.5 py-0.5 text-xs"
+                      >
+                        {token}
+                      </code>
+                    ))}
+                  </span>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

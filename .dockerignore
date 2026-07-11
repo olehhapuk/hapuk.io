@@ -10,7 +10,6 @@ Dockerfile
 .dockerignore
 docker-compose*.yml
 README.md
-drizzle/meta
 .vscode
 .idea
 *.log

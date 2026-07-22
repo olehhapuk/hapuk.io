@@ -7,9 +7,19 @@
 #   migrate      – one-shot: applies Drizzle migrations, then exits (app waits for it)
 #   app          – the Next.js standalone server + headless Chromium (PDF export)
 #
+# TLS/ingress is NOT handled by this file. This host runs one *shared* Caddy
+# instance (webdev/docker/caddy) that fronts every project's domains — see
+# `Caddyfile` in this repo for hapuk.io's site config, which that shared Caddy
+# bind-mounts in. `app` and `minio` join the external `web` network below so
+# that Caddy container can reach them by name; nothing here publishes 80/443.
+#
 # Quick start:
 #   1. cp .env.example .env   and fill in real values (see notes below)
-#   2. docker compose up -d --build
+#   2. make sure the shared `web` Docker network exists (created by
+#      webdev/docker/caddy's compose project) and that Caddy is running with
+#      this repo's Caddyfile mounted in
+#   3. point DNS for hapuk.io and storage.hapuk.io at the host
+#   4. docker compose up -d --build
 #
 # The `app` and `migrate` services read secrets from `.env` (env_file). This compose
 # only *overrides* the couple of values that must point at the in-network services
@@ -19,14 +29,23 @@
 # • Managed Postgres (RDS/Neon/etc.): delete the `postgres` service, drop the
 #   `depends_on: postgres` entries, and set DATABASE_URL in `.env` to the remote DSN.
 # • AWS S3 / Cloudflare R2: delete `minio` + `minio-setup`, unset S3_ENDPOINT (for AWS)
-#   or point it at your provider, and put real credentials in `.env`.
+#   or point it at your provider, and put real credentials in `.env`. Also drop the
+#   storage.hapuk.io site block from `Caddyfile`.
 #
 # ── S3_ENDPOINT must be BROWSER-reachable ───────────────────────────────────────
 # Signature uploads use presigned PUT URLs and PDFs are served from public GET URLs,
 # so S3_ENDPOINT has to be a hostname the *browser* can resolve — a public domain
-# (e.g. https://storage.hapuk.io), NOT the internal `http://minio:9000`. If you expose
-# the bundled MinIO publicly, set S3_ENDPOINT to that public URL in `.env`; the app
-# container reaches it over the same URL.
+# (e.g. https://storage.hapuk.io), NOT the internal `http://minio:9000`. The shared
+# Caddy fronts MinIO's S3 API at storage.hapuk.io with TLS; set S3_ENDPOINT to
+# `https://storage.hapuk.io` in `.env` and the app container reaches it over that
+# same public URL.
+#
+# ── Ports & networking ────────────────────────────────────────────────────────
+# Nothing in this file publishes ports to the host — the shared Caddy instance
+# handles 80/443. `app` and `minio` sit on both `default` (to reach postgres etc.)
+# and the external `web` network (so the shared Caddy can reach them by their
+# `container_name`); use `docker compose exec` if you need to reach them directly
+# for debugging.
 
 services:
   postgres:
@@ -50,15 +69,20 @@ services:
 
   minio:
     image: minio/minio:latest
+    container_name: hapuk-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
       MINIO_SITE_REGION: ${AWS_REGION:-eu-central-1}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000" # S3 API (expose publicly + put behind TLS for presigned URLs)
-      - "${MINIO_ADMIN_PORT:-9001}:9001" # web console
+    # Not published to the host — the shared Caddy fronts the S3 API at
+    # storage.hapuk.io with TLS over the `web` network (see the "Ports &
+    # networking" note at the top of this file). The web console (9001) is
+    # intentionally not exposed; use `docker compose exec minio sh` or a tunnel if needed.
+    networks:
+      - default
+      - web
     volumes:
       - ${MINIO_STORAGE:-./minio-data}:/data
     healthcheck:
@@ -101,6 +125,7 @@ services:
     build:
       context: .
       target: runner
+    container_name: hapuk-app
     restart: unless-stopped
     env_file:
       - .env
@@ -110,8 +135,11 @@ services:
       # BETTER_AUTH_SECRET, BETTER_AUTH_URL, APP_URL, RESEND_API_KEY, EMAIL_FROM,
       # AWS_REGION, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_ENDPOINT
       # all come from .env (see the S3_ENDPOINT note at the top of this file).
-    ports:
-      - "${APP_PORT:-3000}:3000"
+    # Not published to the host — the shared Caddy fronts the app at hapuk.io
+    # with TLS over the `web` network (see the "Ports & networking" note above).
+    networks:
+      - default
+      - web
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,3 +157,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+
+networks:
+  # Created by the shared Caddy compose project (webdev/docker/caddy). Must
+  # already exist — `docker compose up` will error if it doesn't.
+  web:
+    external: true

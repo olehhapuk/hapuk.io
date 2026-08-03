@@ -1,7 +1,7 @@
-invoices.koritsa.website {
+invoices.hapuk.dev {
 	reverse_proxy hapuk-app:3000
 }
 
-invoices-storage.koritsa.website {
+invoices-storage.hapuk.dev {
 	reverse_proxy hapuk-minio:9000
 }

@@ -17,8 +17,11 @@ type SendEmailArgs = {
  * In dev without RESEND_API_KEY set, emails are logged to the console instead of sent.
  */
 export async function sendEmail({ to, subject, html, text }: SendEmailArgs) {
+  console.log(
+    `\n[email:dev] To: ${to}\nSubject: ${subject}\n${text ?? html}\n`,
+  );
   if (!resend) {
-    console.info(
+    console.log(
       `\n[email:dev] To: ${to}\nSubject: ${subject}\n${text ?? html}\n`,
     );
     return;

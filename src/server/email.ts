@@ -32,7 +32,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailArgs) {
     text,
   });
 
-  console.debug(`[email] Resend success: ${JSON.stringify(data)}`);
+  console.log(`[email] Resend success: ${JSON.stringify(data)}`);
 
   // Surface delivery failures (e.g. unverified sending domain) instead of failing silently.
   if (error) {

@@ -16,10 +16,13 @@ export function ResendVerification({ email }: { email: string | null }) {
       return;
     }
     setPending(true);
-    const { error } = await authClient.sendVerificationEmail({
+    const { error, data } = await authClient.sendVerificationEmail({
       email,
       callbackURL: '/dashboard',
     });
+    console.debug(
+      `[ResendVerification] Resend success: ${JSON.stringify(data)}`,
+    );
     setPending(false);
 
     if (error) {

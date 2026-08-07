@@ -11,6 +11,7 @@ export function ResendVerification({ email }: { email: string | null }) {
   const [pending, setPending] = useState(false);
 
   async function resend() {
+    console.debug('[ResendVerification] resend start');
     if (!email) {
       toast.error('No email to resend to. Try signing in again.');
       return;

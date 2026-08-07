@@ -24,13 +24,15 @@ export async function sendEmail({ to, subject, html, text }: SendEmailArgs) {
     return;
   }
 
-  const { error } = await resend.emails.send({
+  const { error, data } = await resend.emails.send({
     from: env.EMAIL_FROM,
     to,
     subject,
     html,
     text,
   });
+
+  console.debug(`[email] Resend success: ${JSON.stringify(data)}`);
 
   // Surface delivery failures (e.g. unverified sending domain) instead of failing silently.
   if (error) {

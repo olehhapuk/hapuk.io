@@ -66,6 +66,7 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     async sendVerificationEmail({ user, url }) {
+      console.log(`[sendVerificationEmail] Verify your email: ${url}`);
       await sendEmail({
         to: user.email,
         subject: 'Verify your hapuk.io email',

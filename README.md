@@ -382,11 +382,12 @@ Notes:
 - The template renders the signature image above the "(Receiver)" line.
 
 > **Storage: S3** via presigned uploads (AWS SDK v3). The browser uploads directly to S3 with a
-> short-lived presigned URL; the app stores only the resulting object key/URL.
+> short-lived presigned URL; the app stores `/api/files/<key>`. The bucket is private: that route
+> checks access (avatars: any signed-in user; signatures/invoices: members of the owning org) and
+> redirects to a short-lived presigned GET.
 >
 > **Local dev uses MinIO** (S3-compatible) from `docker-compose.dev.yml` — API on `:9002`, web
-> console on `:9003` (`minioadmin` / `minioadmin`), bucket `hapuk-uploads` auto-created with public
-> `download` access. When `S3_ENDPOINT` is set (MinIO/R2), construct the S3 client with
+> console on `:9003` (`minioadmin` / `minioadmin`), bucket `hapuk-uploads` auto-created (private). When `S3_ENDPOINT` is set (MinIO/R2), construct the S3 client with
 > `forcePathStyle: true`; leave it unset for real AWS S3.
 
 ---

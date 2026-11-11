@@ -16,6 +16,9 @@ import { env } from '@/env';
  *
  * Browser uploads use a short-lived presigned PUT (`getUploadUrl`). Server-generated
  * files (e.g. Playwright PDFs) use `putObject`.
+ *
+ * The bucket is private: rows store `fileUrl(key)`, an app route that checks access
+ * and redirects to a short-lived presigned GET (`getDownloadUrl`).
  */
 
 function requireStorageEnv() {
@@ -118,14 +121,9 @@ export async function deleteObject(key: string): Promise<void> {
 }
 
 /**
- * Deterministic public URL for objects in a public-read bucket (dev MinIO / public prod bucket).
- * For private objects, use `getDownloadUrl` instead.
+ * App-relative URL for a stored object, served by `src/app/api/files/[...key]/route.ts`
+ * (auth check + redirect to a presigned GET). This is what rows persist.
  */
-export function publicUrl(key: string): string {
-  const cfg = requireStorageEnv();
-  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
-  if (cfg.endpoint) {
-    return `${cfg.endpoint.replace(/\/$/, '')}/${cfg.bucket}/${encodedKey}`;
-  }
-  return `https://${cfg.bucket}.s3.${cfg.region}.amazonaws.com/${encodedKey}`;
+export function fileUrl(key: string): string {
+  return `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`;
 }

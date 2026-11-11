@@ -11,7 +11,7 @@ import { createSignatureUploadUrl } from '@/server/actions/uploads';
 import { Button } from '@/components/ui/button';
 
 async function uploadSignature(blob: Blob, contentType: string) {
-  const { uploadUrl, publicUrl } = await createSignatureUploadUrl({
+  const { uploadUrl, fileUrl } = await createSignatureUploadUrl({
     contentType,
   });
   const res = await fetch(uploadUrl, {
@@ -20,7 +20,7 @@ async function uploadSignature(blob: Blob, contentType: string) {
     headers: { 'Content-Type': contentType },
   });
   if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-  return publicUrl;
+  return fileUrl;
 }
 
 export function SignatureManager({

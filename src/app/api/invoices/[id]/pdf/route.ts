@@ -9,7 +9,7 @@ import {
 } from '@/server/db/queries/context';
 import { getInvoiceWithItems } from '@/server/db/queries/invoices';
 import { renderInvoicePdf } from '@/server/pdf/render';
-import { publicUrl, putObject } from '@/server/storage/s3';
+import { fileUrl, putObject } from '@/server/storage/s3';
 import { env } from '@/env';
 
 // Playwright requires the Node.js runtime.
@@ -65,7 +65,7 @@ export async function GET(
     await putObject({ key, body: pdf, contentType: 'application/pdf' });
     await db
       .update(schema.invoice)
-      .set({ pdfUrl: publicUrl(key), updatedAt: new Date() })
+      .set({ pdfUrl: fileUrl(key), updatedAt: new Date() })
       .where(
         and(
           eq(schema.invoice.id, id),

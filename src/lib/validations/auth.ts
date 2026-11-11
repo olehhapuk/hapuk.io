@@ -42,7 +42,13 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const updateProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  image: z.string().url().optional().or(z.literal('')),
+  // Absolute URL, or an uploaded file served by /api/files (see fileUrl).
+  image: z
+    .string()
+    .url()
+    .or(z.string().startsWith('/api/files/'))
+    .optional()
+    .or(z.literal('')),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 

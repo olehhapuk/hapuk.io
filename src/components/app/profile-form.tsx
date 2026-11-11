@@ -63,7 +63,7 @@ export function ProfileForm({ name, image }: ProfileFormProps) {
 
     setUploading(true);
     try {
-      const { uploadUrl, publicUrl } = await createAvatarUploadUrl({
+      const { uploadUrl, fileUrl } = await createAvatarUploadUrl({
         contentType: file.type,
       });
       const res = await fetch(uploadUrl, {
@@ -72,8 +72,8 @@ export function ProfileForm({ name, image }: ProfileFormProps) {
         headers: { 'Content-Type': file.type },
       });
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      setImageUrl(publicUrl);
-      form.setValue('image', publicUrl, { shouldDirty: true });
+      setImageUrl(fileUrl);
+      form.setValue('image', fileUrl, { shouldDirty: true });
       toast.success('Avatar uploaded — save to apply.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload failed');

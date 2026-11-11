@@ -1,9 +1,9 @@
 # Production deployment for hapuk.io.
 #
 # Services:
-#   postgres     – PostgreSQL 16 (persistent volume, healthcheck)
-#   minio        – S3-compatible object storage for signatures & PDFs
-#   minio-setup  – one-shot: creates the bucket + makes objects publicly downloadable
+#   postgres     – PostgreSQL 18 (named volume `pg-data`, healthcheck)
+#   minio        – S3-compatible object storage for signatures & PDFs (named volume `minio-data`)
+#   minio-setup  – one-shot: creates the bucket and keeps it private
 #   migrate      – one-shot: applies Drizzle migrations, then exits (app waits for it)
 #   app          – the Next.js standalone server + headless Chromium (PDF export)
 #
@@ -33,8 +33,8 @@
 #   storage.hapuk.io site block from `Caddyfile`.
 #
 # ── S3_ENDPOINT must be BROWSER-reachable ───────────────────────────────────────
-# Signature uploads use presigned PUT URLs and PDFs are served from public GET URLs,
-# so S3_ENDPOINT has to be a hostname the *browser* can resolve — a public domain
+# Uploads use presigned PUT URLs and downloads redirect (via /api/files) to presigned
+# GET URLs, so S3_ENDPOINT has to be a hostname the *browser* can resolve — a public domain
 # (e.g. https://storage.hapuk.io), NOT the internal `http://minio:9000`. The shared
 # Caddy fronts MinIO's S3 API at storage.hapuk.io with TLS; set S3_ENDPOINT to
 # `https://storage.hapuk.io` in `.env` and the app container reaches it over that
@@ -49,14 +49,16 @@
 
 services:
   postgres:
-    image: postgres:16
+    # Major upgrades need a dump/restore into a fresh volume — never just bump this tag.
+    # 18+ images keep data under /var/lib/postgresql/<major>/docker, hence this mount path.
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-hapuk}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-hapuk}
     volumes:
-      - ${POSTGRES_STORAGE:-./pg-data}:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql
     healthcheck:
       test:
         [
@@ -68,7 +70,8 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    # Pinned: MinIO no longer publishes updated community images, so `latest` is frozen.
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: hapuk-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -84,16 +87,17 @@ services:
       - default
       - web
     volumes:
-      - ${MINIO_STORAGE:-./minio-data}:/data
+      - minio-data:/data
     healthcheck:
       test: ["CMD-SHELL", "mc ready local || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Creates the bucket and makes objects publicly downloadable, then exits.
+  # Creates the bucket and makes sure it is private (files are served through the
+  # app's authenticated /api/files route), then exits.
   minio-setup:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_started
@@ -101,7 +105,7 @@ services:
       /bin/sh -c "
       until mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID:-minioadmin} ${AWS_SECRET_ACCESS_KEY:-minioadmin}; do echo 'waiting for minio...'; sleep 1; done;
       mc mb --ignore-existing local/${S3_BUCKET:-hapuk-uploads};
-      mc anonymous set download local/${S3_BUCKET:-hapuk-uploads};
+      mc anonymous set none local/${S3_BUCKET:-hapuk-uploads};
       echo 'minio bucket ready';
       exit 0;
       "
@@ -163,3 +167,7 @@ networks:
   # already exist — `docker compose up` will error if it doesn't.
   web:
     external: true
+
+volumes:
+  pg-data:
+  minio-data:

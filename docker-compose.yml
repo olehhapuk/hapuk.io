@@ -70,8 +70,11 @@ services:
       retries: 10
 
   minio:
-    # Pinned: MinIO no longer publishes updated community images, so `latest` is frozen.
+    # MinIO's images are no longer published (Docker Hub / Quay), so these tags exist only
+    # as local tags of the last cached images; never pull. On a new host, `docker load` them
+    # first (home.lab keeps them in /srv/share/backups/images/).
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    pull_policy: never
     container_name: hapuk-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -97,7 +100,8 @@ services:
   # Creates the bucket and makes sure it is private (files are served through the
   # app's authenticated /api/files route), then exits.
   minio-setup:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z # local tag, see the minio service
+    pull_policy: never
     depends_on:
       minio:
         condition: service_started
